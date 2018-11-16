@@ -73,6 +73,7 @@ const todoSchema = new schema.Entity('todo');
 const TODO_ADD = 'TODO_ADD';
 const TODO_TOGGLE = 'TODO_TOGGLE';
 const FILTER_SET = 'FILTER_SET';
+const NOTIFICATION_HIDE = 'NOTIFICATION_HIDE';
 
 const todos = [
   { id: '1', name: 'Redux Standalone with advanced Actions' },
@@ -144,6 +145,31 @@ function applySetFilter(state, action) {
   return action.filter;
 }
 
+function notificationReducer(state = {}, action) {
+  switch(action.type) {
+    case TODO_ADD : {
+      return applySetNotifyAboutAddTodo(state, action);
+    }
+    case NOTIFICATION_HIDE : {
+      return applyRemoveNotification(state, action);
+    }
+    default : return state;
+  }
+}
+
+function applySetNotifyAboutAddTodo(state, action) {
+  const { name, id } = action.todo;
+  return { ...state, [id]: 'Todo Created: ' + name };
+}
+
+function applyRemoveNotification(state, action) {
+  const {
+    [action.id]: notificationToRemove,
+    ...restNotificiations
+  } = state;
+  return restNotificiations;
+}
+
 // action creators
 
 function doAddTodo(id, name) {
@@ -167,11 +193,19 @@ function doSetFilter(filter) {
   };
 }
 
+function doNotificationHide(id) {
+  return {
+    type: NOTIFICATION_HIDE,
+    id
+  }
+}
+
 // store
 
 const rootReducer = combineReducers({
   todoState: todoReducer,
   filterState: filterReducer,
+  notificationState: notificationReducer,
 });
 
 const logger = createLogger();
@@ -195,6 +229,14 @@ function getTodo(state, todoId) {
   return state.todoState.entities[todoId];
 }
 
+function getNotifications(state) {
+  return getArrayOfObject(state.notificationState);
+}
+
+function getArrayOfObject(object) {
+  return Object.keys(object).map(key => object[key]);
+}
+
 // view layer
 
 function TodoApp() {
@@ -203,6 +245,7 @@ function TodoApp() {
       <ConnectedFilter />
       <ConnectedTodoCreate />
       <ConnectedTodoList />
+      <ConnectedNotifications />
     </div>
   );
 
@@ -235,6 +278,14 @@ function TodoItem({ todo, onToggleTodo }) {
   );
 }
 
+function Notifications({ notifications }) {
+  return (
+    <div>
+      {notifications.map(note => <div key={note}>{note}</div>)}
+    </div>
+  );
+}
+
 function mapStateToPropsList(state) {
   return {
     todosAsIds: getTodosAsIds(state),
@@ -244,6 +295,12 @@ function mapStateToPropsList(state) {
 function mapStateToPropsItem(state, props) {
   return {
     todo: getTodo(state, props.todoId),
+  };
+}
+
+function mapStateToPropsNotifications(state, props) {
+  return {
+    notifications: getNotifications(state),
   };
 }
 
@@ -274,6 +331,7 @@ const ConnectedTodoItem = connect(
 )(TodoItem);
 const ConnectedFilter = connect(null, mapDispatchToPropsFilter)(Filter);
 const ConnectedTodoCreate = connect(null, mapDispatchToPropsCreate)(TodoCreate);
+const ConnectedNotifications = connect(mapStateToPropsNotifications)(Notifications);
 
 ReactDOM.render(
   <Provider store={store}>
