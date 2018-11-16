@@ -46,6 +46,26 @@ class TodoCreate extends React.Component {
   }
 }
 
+function Filter({ onSetFilter }) {
+  return (
+    <div>
+      Show 
+      <button
+        type="button"
+        onClick={() => onSetFilter('SHOW_ALL')}>
+        All</button>
+      <button
+        type="button"
+        onClick={() => onSetFilter('SHOW_COMPLETED')}>
+        Completed</button>
+      <button
+        type="button"
+        onClick={() => onSetFilter('SHOW_INCOMPLETED')}>
+        Incompleted</button>
+    </div>
+  );
+}
+
 // schemas
 
 const todoSchema = new schema.Entity('todo');
@@ -72,6 +92,14 @@ console.log(normalizedTodos);
 const initialTodoState = {
   entities: normalizedTodos.entities.todo,
   ids: normalizedTodos.result
+}
+
+// filters
+
+const VISIBILITY_FILTERS = {
+  SHOW_COMPLETED: item => item.completed,
+  SHOW_INCOMPLETED: item => !item.completed,
+  SHOW_ALL: item => true,
 }
 
 // reducers
@@ -157,7 +185,10 @@ const store = createStore(
 // selectors
 
 function getTodosAsIds(state) {
-  return state.todoState.ids;
+  return state.todoState.ids
+    .map(id => state.todoState.entities[id])
+    .filter(VISIBILITY_FILTERS[state.filterState])
+    .map(todo => todo.id);
 }
 
 function getTodo(state, todoId) {
@@ -169,6 +200,7 @@ function getTodo(state, todoId) {
 function TodoApp() {
   return (
     <div>
+      <ConnectedFilter />
       <ConnectedTodoCreate />
       <ConnectedTodoList />
     </div>
@@ -221,6 +253,12 @@ function mapDispatchToPropsItem(dispatch) {
   };
 }
 
+function mapDispatchToPropsFilter(dispatch) {
+  return {
+    onSetFilter: filterType => dispatch(doSetFilter(filterType)),
+  };
+}
+
 function mapDispatchToPropsCreate(dispatch) {
   return {
     onAddTodo: name => dispatch(doAddTodo(uuid(), name)),
@@ -234,9 +272,8 @@ const ConnectedTodoItem = connect(
   mapStateToPropsItem,
   mapDispatchToPropsItem
 )(TodoItem);
+const ConnectedFilter = connect(null, mapDispatchToPropsFilter)(Filter);
 const ConnectedTodoCreate = connect(null, mapDispatchToPropsCreate)(TodoCreate);
-
-
 
 ReactDOM.render(
   <Provider store={store}>
