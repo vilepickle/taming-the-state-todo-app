@@ -5,6 +5,7 @@ import { Provider, connect } from 'react-redux';
 import { createLogger } from 'redux-logger';
 import { schema, normalize } from 'normalizr';
 import uuid from 'uuid/v4';
+import thunk from 'redux-thunk';
 import './index.css';
 
 class TodoCreate extends React.Component {
@@ -193,10 +194,20 @@ function doSetFilter(filter) {
   };
 }
 
-function doNotificationHide(id) {
+function doHideNotification(id) {
   return {
     type: NOTIFICATION_HIDE,
     id
+  }
+}
+
+function doAddTodoWithNotification(id, name) {
+  return function (dispatch) {
+    dispatch(doAddTodo(id, name));
+
+    setTimeout(function () {
+      dispatch(doHideNotification(id));
+    }, 5000);
   }
 }
 
@@ -213,7 +224,7 @@ const logger = createLogger();
 const store = createStore(
   rootReducer,
   undefined,
-  applyMiddleware(logger)
+  applyMiddleware(thunk, logger)
 );
 
 // selectors
@@ -248,8 +259,6 @@ function TodoApp() {
       <ConnectedNotifications />
     </div>
   );
-
-  
 }
 
 function TodoList({ todosAsIds }) {
@@ -318,7 +327,9 @@ function mapDispatchToPropsFilter(dispatch) {
 
 function mapDispatchToPropsCreate(dispatch) {
   return {
-    onAddTodo: name => dispatch(doAddTodo(uuid(), name)),
+    onAddTodo: name => dispatch(
+      doAddTodoWithNotification(uuid(), name)
+    ),
   };
 }
 
